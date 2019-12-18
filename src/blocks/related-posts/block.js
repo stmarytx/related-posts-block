@@ -7,7 +7,7 @@ import { SearchPostsControl } from './searchposts.js';
 export default class Block extends Component {
 	renderEditMode() {
 		const { props } = this;
-		const { setAttributes } = this.props;
+		const { attributes, setAttributes } = this.props;
 		const onDone = () => {
 			setAttributes({ editMode: false });
 		}
