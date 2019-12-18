@@ -1,4 +1,4 @@
-const { MenuGroup, MenuItem, SelectControl } = wp.components;
+const { MenuGroup, MenuItem, SelectControl, TextControl } = wp.components;
 const { Component } = wp.element;
  
 export class SearchPostsControl extends Component {
@@ -14,7 +14,7 @@ export class SearchPostsControl extends Component {
         this.updateSelectedIds = this.updateSelectedIds.bind(this);
         this.searchFor = this.searchFor.bind(this);
     }
- 
+
     componentDidMount() {
         this.getStartingData();
     }
@@ -53,7 +53,7 @@ export class SearchPostsControl extends Component {
         this.searchFor('');
     }
  
-    searchFor(searchPostType = '') {
+    searchFor(searchPostType = '', keyword = '') {
         let { attributes: { postType } } = this.props;
         let finalPostType = postType;
         // If a post type was explicitly passed to the function, use that instead
@@ -62,7 +62,13 @@ export class SearchPostsControl extends Component {
         }
         // Make REST API call to get post objects - excluding current ID, but including the postType and keyword if present
         let currentId = wp.data.select('core/editor').getCurrentPostId();
-        let path = '/wp/v2/' + finalPostType + '?exclude=' + currentId;
+        let path;
+        if(keyword != '') {
+            path = '/wp/v2/' + finalPostType + '?search=' + keyword + '&exclude=' + currentId;
+ 
+        } else {
+            path = '/wp/v2/' + finalPostType + '?exclude=' + currentId;
+        }
         wp.apiFetch( { path: path } ).then( ( posts ) => {
             this.setState({ resultObjects: posts }, () => this.buildResultButtons());
         })
@@ -78,6 +84,12 @@ export class SearchPostsControl extends Component {
  
     render() {
         let { attributes: { postType } } = this.props;
+		// Posts are plural; all others are singular
+		let displayType = postType;
+		if(postType != 'posts' && postType != 'faculty') {
+			displayType += 's';
+		}
+		let label = 'Search for ' + displayType + ' to display';
         return(
             <div className='search-posts-control'>
                 <div className='posts-selected'>
@@ -94,6 +106,11 @@ export class SearchPostsControl extends Component {
                 </div>
                 <div className='posts-search'>
                     <h2>Add to selections:</h2>
+                    <TextControl
+                        label={ label }
+                        type='search'
+                        onChange={ (val) => this.searchFor('', val) }
+                    />
                     <MenuGroup label='Search Results' className='posts-list' >
                         { this.state.resultButtons }
                     </MenuGroup>
