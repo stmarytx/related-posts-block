@@ -22,7 +22,7 @@ export class SearchPostsControl extends Component {
     buildResultButtons() {
         let { setAttributes } = this.props;
         let resultButtons = this.state.resultObjects.map(function(item, ind) {
-            let isChecked = false;
+            let isChecked = item.checked;
             // Save the opposite value for onClick
             // Must have default true, because if nothing is selected, it's false, and true is what it should change to
             let toCheck = true;
@@ -79,7 +79,31 @@ export class SearchPostsControl extends Component {
     }
  
     updateSelectedIds(id, val) {
-        console.log(id + ' checked is ' + val);
+        let { attributes: { postIds } } = this.props;
+        let stateSelected = postIds;
+        // Update copy of selectedIds
+        if(val == true) {
+            stateSelected.push(id);
+        } else {
+            let idIndex = stateSelected.indexOf(id);
+            stateSelected.splice(idIndex, 1);
+        }
+        // Update copy of resultObjects
+        let posts = this.state.resultObjects;
+        for(var i = 0; i < posts.length; i++) {
+            // if this post ID is in attributes, set checked to true
+            posts[i].checked = false;
+            for(var j = 0; j < stateSelected.length; j++) {
+                if(posts[i].id === stateSelected[j]) {
+                    posts[i].checked = true;
+                    break;
+                }
+            }
+        }
+        // Save resultObjects to state, and then rebuild result buttons
+        this.setState({ resultObjects: posts }, function() {
+            this.buildResultButtons();
+        });
     }
  
     render() {
