@@ -1,14 +1,16 @@
-const { MenuGroup, MenuItem, SelectControl, TextControl } = wp.components;
+const { Button, MenuGroup, MenuItem, SelectControl, TextControl } = wp.components;
 const { Component } = wp.element;
  
 export class SearchPostsControl extends Component {
     constructor(props) {
         super(props);
         this.state = {
+            selectedButtons: [],
             resultObjects: [],
             resultButtons: []
         };
         this.buildResultButtons = this.buildResultButtons.bind(this);
+        this.buildSelectedButtons = this.buildSelectedButtons.bind(this);
         this.changePostType = this.changePostType.bind(this);
         this.getStartingData = this.getStartingData.bind(this);
         this.updateSelectedIds = this.updateSelectedIds.bind(this);
@@ -40,7 +42,59 @@ export class SearchPostsControl extends Component {
         let timeNow = Date.now();
         this.setState({ resultButtons: resultButtons }, setAttributes({ updated: timeNow }));
     }
- 
+
+    buildSelectedButtons() {
+		let { attributes: { postIds, postType }, setAttributes } = this.props;
+		// If post IDs are saved in state, get their titles and show buttons
+		if(postIds.length > 0) {
+			let selectionButtons = [];
+			// Get all the post info in a single REST API call
+			let path = '/wp/v2/' + postType + '?include=' + postIds;
+			wp.apiFetch({ path: path })
+				.then( (posts) => {
+					selectionButtons = postIds.map((item) => {
+						// If this post ID was found in the REST API CALL
+						let match;
+						for(let i=0; i < posts.length; i++) {
+							if(posts[i].id == item) {
+								match = i;
+								break;
+							}
+						}
+						if(match >= 0) {
+							return(
+								<Button
+									isDefault
+									isDestructive
+									onClick={ () => this.updateSelectedIds(item, false) }
+								>
+									{ posts[match].title.rendered }
+								</Button>
+							);
+						} else {
+							// If the post ID was not found, remove it from selectedIds
+							let idIndex = postIds.indexOf(item);
+							postIds.splice(idIndex, 1);
+							setAttributes({ postIds, postIds });
+							return(
+								<p>A previously selected item was removed because it no longer exists.</p>
+							);
+						}
+					})
+				})
+				.catch( (error) => {
+					console.log('Related Posts error',error);
+				})
+				.then(() =>
+					this.setState({ selectedButtons: selectionButtons })
+				);
+		}
+		// If no post IDs, show paragraph
+		else {
+			this.setState({ selectedButtons: <p>None selected</p> });
+		}
+	}
+
     changePostType(newType) {
         // Clear postIds, update postType Attribute
         let { setAttributes } = this.props;
@@ -102,6 +156,7 @@ export class SearchPostsControl extends Component {
         }
         // Save resultObjects to state, and then rebuild result buttons
         this.setState({ resultObjects: posts }, function() {
+            this.buildSelectedButtons();
             this.buildResultButtons();
         });
     }
@@ -127,6 +182,7 @@ export class SearchPostsControl extends Component {
                         ] }
                         onChange={ (val) => { this.changePostType(val) } }
                     />
+                    { this.state.selectedButtons }
                 </div>
                 <div className='posts-search'>
                     <h2>Add to selections:</h2>
